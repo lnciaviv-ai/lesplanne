@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="af">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mispah-Skool | Lesplan + Toets Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .lesson-table { border-collapse: collapse; width: 100%; }
+    .lesson-table th, .lesson-table td { border: 1px solid #333; padding: 8px 12px; vertical-align: top; }
+    .lesson-table th { background-color: #f3f4f6; font-weight: 600; text-align: left; }
+    .gray-bg { background-color: #f3f4f6; }
+    @media print {
+      .no-print { display: none !important; }
+      .page-break { page-break-before: always; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-blue-900 text-white shadow-lg no-print">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold text-lg">M</div>
+        <div>
+          <h1 class="text-lg font-bold">Mispah-Skool</h1>
+          <p class="text-blue-200 text-xs">AI Lesplan + Gedifferensieerde Toets Generator</p>
+        </div>
+      </div>
+      <div class="text-right text-xs text-blue-200">
+        Premium AI • Render Ready
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8">
+
+    <!-- Form -->
+    <div class="bg-white rounded-xl shadow-md p-6 mb-8 no-print">
+      <h2 class="text-xl font-bold text-gray-800 mb-5">Skep ’n nuwe lesplan + toets</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Vak *</label>
+          <select id="vak" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="Natuurwetenskap">Natuurwetenskap</option>
+            <option value="Kantoor Administrasie">Kantoor Administrasie</option>
+            <option value="Wiskunde">Wiskunde</option>
+            <option value="Ander">Ander</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Graad-reeks *</label>
+          <select id="graad" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="5.1-5.3">Graad 5.1 – 5.3</option>
+            <option value="4.1-4.2">Graad 4.1 – 4.2</option>
+            <option value="5.1-5.2">Graad 5.1 – 5.2</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Kwartaal *</label>
+          <select id="kwartaal" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="1">1</option>
+            <option value="2" selected>2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Week *</label>
+          <input type="number" id="week" min="1" max="12" value="7" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Datum (bv. 11-15/05)</label>
+          <input type="text" id="datum" placeholder="11-15/05" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tema *</label>
+          <input type="text" id="tema" placeholder="bv. Lae van die Aarde" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Doelstellings / Prompt *</label>
+        <textarea id="doelstellings" rows="4" placeholder="Beskryf wat die leerders moet leer... (hoe meer detail, hoe beter die resultaat)" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+      </div>
+
+      <div class="mt-3 flex items-center gap-2">
+        <input type="checkbox" id="includeTest" checked class="w-4 h-4">
+        <label for="includeTest" class="text-sm text-gray-700">Genereer ook gedifferensieerde toets (Groep 1, 2 & 3)</label>
+      </div>
+
+      <div class="mt-5 flex flex-wrap gap-3">
+        <button id="generateBtn" onclick="generate()" class="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-6 py-2.5 rounded-lg text-sm flex items-center gap-2">
+          <span id="btnText">Genereer met AI</span>
+          <span id="spinner" class="hidden animate-spin">⟳</span>
+        </button>
+        <button onclick="clearForm()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2.5 rounded-lg text-sm">Maak skoon</button>
+      </div>
+
+      <div id="errorBox" class="hidden mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm"></div>
+    </div>
+
+    <!-- Result -->
+    <div id="resultArea" class="hidden">
+      <div class="flex justify-between items-center mb-4 no-print">
+        <h2 class="text-lg font-bold text-gray-800">Gegenereerde Lesplan + Toets</h2>
+        <div class="flex gap-2">
+          <button onclick="window.print()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm">Druk</button>
+          <button onclick="downloadPDF()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm">Aflaai PDF</button>
+        </div>
+      </div>
+      <div id="printArea" class="bg-white rounded-xl shadow-lg p-8"></div>
+    </div>
+
+    <!-- History -->
+    <div class="mt-10 no-print">
+      <h3 class="font-bold text-gray-800 mb-3">Onlangse lesplanne</h3>
+      <div id="historyList" class="space-y-2 text-sm text-gray-600">
+        <p class="text-gray-400">Nog geen lesplanne gegenereer nie.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center text-gray-500 text-xs py-6 no-print">
+    Mispah-Skool AI Lesplan Generator • Gebou vir Render.com
+  </footer>
+
+  <script>
+    async function generate() {
+      const data = {
+        vak: document.getElementById('vak').value,
+        graad: document.getElementById('graad').value,
+        kwartaal: document.getElementById('kwartaal').value,
+        week: document.getElementById('week').value,
+        datum: document.getElementById('datum').value,
+        tema: document.getElementById('tema').value.trim(),
+        doelstellings: document.getElementById('doelstellings').value.trim(),
+        includeTest: document.getElementById('includeTest').checked
+      };
+
+      if (!data.tema || !data.doelstellings) {
+        showError('Vul asseblief Tema en Doelstellings in.');
+        return;
+      }
+
+      const btn = document.getElementById('generateBtn');
+      const btnText = document.getElementById('btnText');
+      const spinner = document.getElementById('spinner');
+      btn.disabled = true;
+      btnText.textContent = 'Besig om te genereer...';
+      spinner.classList.remove('hidden');
+      hideError();
+
+      try {
+        const res = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Kon nie genereer nie');
+
+        renderResult(json.data);
+        loadHistory();
+      } catch (err) {
+        showError(err.message);
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = 'Genereer met AI';
+        spinner.classList.add('hidden');
+      }
+    }
+
+    function renderResult(data) {
+      const lp = data.lesplan;
+      const test = data.toets;
+      const h = lp.header;
+
+      let html = `
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-12 h-12 bg-blue-800 text-white rounded-full flex items-center justify-center font-bold">MS</div>
+          <div>
+            <div class="font-bold text-lg">${h.vak} WEEKLIKSE BEPLANNING GRAAD ${h.graad}</div>
+            <div class="text-sm text-gray-600">JAAR: ${h.jaar}</div>
+          </div>
+        </div>
+
+        <table class="lesson-table mb-5">
+          <tr>
+            <th style="width:15%">KWARTAAL</th>
+            <th style="width:15%">WEEK</th>
+            <th style="width:25%">DATUM</th>
+            <th style="width:45%">TEMA</th>
+          </tr>
+          <tr>
+            <td>${h.kwartaal}</td>
+            <td>${h.week}</td>
+            <td>${h.datum || '—'}</td>
+            <td><strong>${h.tema}</strong></td>
+          </tr>
+        </table>
+
+        <table class="lesson-table mb-5">
+          <tr>
+            <td class="gray-bg" style="width:32%; vertical-align:top">
+              <strong>Konsep onderwys/ groepwerk</strong><br>
+              Leerwerk wat uitgelig word vir die week:
+            </td>
+            <td>
+              <strong>Leerwerk wat uitgelig word vir die week:</strong>
+              <ul class="list-disc ml-5 mt-1 space-y-1 text-sm">
+                ${(lp.leerwerk || []).map(i => `<li>${i}</li>`).join('')}
+              </ul>
+
+              <div class="mt-3">
+                <strong>Konsepte:</strong>
+                <ul class="list-disc ml-5 mt-1 space-y-1 text-sm">
+                  ${(lp.konsepte || []).map(i => `<li>${i}</li>`).join('')}
+                </ul>
+              </div>
+
+              <div class="mt-3">
+                <strong>Praktiese Aktiwiteite</strong>
+                ${renderActivities(lp.praktieseAktiwiteite)}
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <table class="lesson-table">
+          <tr><td class="gray-bg" style="width:32%"><strong>Integrasie:</strong></td>
+              <td><ul class="list-disc ml-5 text-sm">${(lp.integrasie||[]).map(i=>`<li>${i}</li>`).join('')}</ul></td></tr>
+          <tr><td class="gray-bg"><strong>Formele/informele assessering:</strong></td>
+              <td><ul class="list-disc ml-5 text-sm">${(lp.assessering||[]).map(i=>`<li>${i}</li>`).join('')}</ul></td></tr>
+          <tr><td class="gray-bg"><strong>Onderwysers intervensie</strong></td>
+              <td><ul class="list-disc ml-5 text-sm">${(lp.intervensie||[]).map(i=>`<li>${i}</li>`).join('')}</ul></td></tr>
+          <tr><td class="gray-bg"><strong>Hulpmiddels/AT</strong></td>
+              <td class="text-sm">${lp.hulpmiddels || ''}</td></tr>
+          <tr><td class="gray-bg"><strong>HOD KOMMENTAAR:</strong></td><td></td></tr>
+          <tr><td class="gray-bg"><strong>DATUM ONTVANG:</strong></td><td></td></tr>
+          <tr><td class="gray-bg"><strong>ONDERWYSER HANDTEKENING</strong></td><td></td></tr>
+        </table>
+      `;
+
+      if (test) {
+        html += renderTest(test, h);
+      }
+
+      document.getElementById('printArea').innerHTML = html;
+      document.getElementById('resultArea').classList.remove('hidden');
+      document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function renderActivities(act) {
+      if (!act) return '';
+      let html = '';
+      ['graad1', 'graad2', 'graad3'].forEach(key => {
+        if (act[key]) {
+          html += `<div class="mt-2"><strong class="text-sm">${act[key].titel}</strong>
+            <ul class="list-disc ml-5 text-sm space-y-0.5">
+              ${(act[key].aktiwiteite || []).map(a => `<li>${a}</li>`).join('')}
+            </ul></div>`;
+        }
+      });
+      return html;
+    }
+
+    function renderTest(test, header) {
+      return `
+        <div class="page-break mt-10 border-2 border-blue-800 rounded-lg p-5">
+          <div class="flex justify-between items-start mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-10 h-10 bg-blue-800 text-white rounded-full flex items-center justify-center font-bold text-sm">MS</div>
+              <div>
+                <div class="font-bold">${test.titel || 'Informele Assessering'}</div>
+                <div class="text-sm text-gray-600">${header.vak}</div>
+              </div>
+            </div>
+            <div class="text-right text-sm">
+              <div><strong>Totaal: ${test.totaal || 15}</strong></div>
+              <div>Graad: ________</div>
+              <div class="mt-1">Naam: _______________________</div>
+              <div>Datum: ________</div>
+            </div>
+          </div>
+
+          <div class="bg-blue-50 border border-blue-200 rounded p-2 mb-4 text-sm">
+            <strong>Tema:</strong> ${header.tema}
+          </div>
+
+          <!-- Groep 1 -->
+          <div class="mb-5">
+            <h3 class="font-bold bg-green-100 px-2 py-1 rounded text-sm mb-2">${test.groep1?.titel || 'Groep 1 (Basies)'}</h3>
+            <p class="text-xs font-medium mb-1">Instruksies:</p>
+            <ol class="list-decimal ml-5 text-xs mb-2 space-y-0.5">
+              ${(test.groep1?.instruksies || []).map(i => `<li>${i}</li>`).join('')}
+            </ol>
+            <div class="border rounded p-2 bg-gray-50 mb-2">
+              <p class="text-xs font-medium mb-1">Woorde om te gebruik:</p>
+              <div class="flex flex-wrap gap-1 text-xs">
+                ${(test.groep1?.woordbank || []).map(w => `<span class="bg-white border px-2 py-0.5 rounded">${w}</span>`).join('')}
+              </div>
+            </div>
+            <div class="text-xs space-y-1">
+              ${(test.groep1?.take || []).map((t,i) => `<p>${i+1}. ${t}</p>`).join('')}
+            </div>
+            <div class="mt-2 text-xs space-y-0.5 ml-3">
+              ${(test.groep1?.matchingVoorbeelde || []).map(m => `<p>• ${m}</p>`).join('')}
+            </div>
+          </div>
+
+          <!-- Groep 2 -->
+          <div class="mb-5">
+            <h3 class="font-bold bg-yellow-100 px-2 py-1 rounded text-sm mb-2">${test.groep2?.titel || 'Groep 2 (Matig)'}</h3>
+            <p class="text-xs mb-2">${test.groep2?.instruksies || ''}</p>
+            <div class="space-y-2 text-xs">
+              ${(test.groep2?.vrae || []).map(v => `
+                <div>
+                  <p><strong>${v.nommer}.</strong> ${v.vraag} (${v.punte})</p>
+                  <div class="border-b border-gray-300 h-5 mt-1"></div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Groep 3 -->
+          ${test.groep3 ? `
+          <div class="mb-5">
+            <h3 class="font-bold bg-red-100 px-2 py-1 rounded text-sm mb-2">${test.groep3.titel}</h3>
+            <p class="text-xs mb-2">${test.groep3.instruksies || ''}</p>
+            <div class="space-y-2 text-xs">
+              ${(test.groep3.vrae || []).map(v => `
+                <div>
+                  <p><strong>${v.nommer}.</strong> ${v.vraag} (${v.punte})</p>
+                  <div class="border-b border-gray-300 h-8 mt-1"></div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- Rubriek -->
+          <div>
+            <h3 class="font-bold text-sm mb-2">Rubriek – Groep 1</h3>
+            <table class="w-full text-xs border-collapse">
+              <thead>
+                <tr class="bg-indigo-100">
+                  <th class="border p-1 text-left">Kriterium</th>
+                  <th class="border p-1">0–1</th>
+                  <th class="border p-1">2</th>
+                  <th class="border p-1">3</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(test.rubriek?.kriteria || []).map(k => `
+                  <tr>
+                    <td class="border p-1">${k.naam}</td>
+                    ${(k.vlakke || []).map(v => `<td class="border p-1 text-center">${v}</td>`).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await fetch('/api/history');
+        const json = await res.json();
+        const list = document.getElementById('historyList');
+        if (!json.history || json.history.length === 0) {
+          list.innerHTML = '<p class="text-gray-400">Nog geen lesplanne gegenereer nie.</p>';
+          return;
+        }
+        list.innerHTML = json.history.map(h => `
+          <div class="bg-white border rounded-lg p-3 flex justify-between items-center">
+            <div>
+              <span class="font-medium">${h.tema}</span>
+              <span class="text-gray-500 ml-2">${h.vak} • Week ${h.week}</span>
+            </div>
+            <button onclick="loadHistoryItem('${h.id}')" class="text-blue-600 text-xs hover:underline">Bekyk</button>
+          </div>
+        `).join('');
+      } catch (e) {}
+    }
+
+    async function loadHistoryItem(id) {
+      const res = await fetch(`/api/history/${id}`);
+      const item = await res.json();
+      if (item.result) renderResult(item.result);
+    }
+
+    function downloadPDF() {
+      const element = document.getElementById('printArea');
+      html2pdf().set({
+        margin: 10,
+        filename: 'Mispah_Lesplan_Toets.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(element).save();
+    }
+
+    function showError(msg) {
+      const box = document.getElementById('errorBox');
+      box.textContent = msg;
+      box.classList.remove('hidden');
+    }
+    function hideError() {
+      document.getElementById('errorBox').classList.add('hidden');
+    }
+    function clearForm() {
+      document.getElementById('tema').value = '';
+      document.getElementById('doelstellings').value = '';
+      document.getElementById('datum').value = '';
+      document.getElementById('resultArea').classList.add('hidden');
+      hideError();
+    }
+
+    // Load history on start
+    loadHistory();
+  </script>
+</body>
+</html>
